@@ -73,11 +73,31 @@ Send newline-terminated JSON to the socket:
 
 ## Supported events
 
-All standard Claude Code hook events are supported, **except `PermissionRequest`**:
-approval cards are not yet implemented for third-party agents (only Claude Code gets
-one). A `PermissionRequest` from an external agent is answered immediately with no
-decision, so the relay writes nothing and the agent re-asks in its terminal.
-Approval support for other agents will be added with Codex support.
+All standard Claude Code hook events are supported.
+
+**`PermissionRequest` only works for agents Coucou ships a pill for.** Claude Code, Pi,
+Copilot CLI and Antigravity get a real approval card: the relay stays connected until you
+answer in the island, and an Allow or Deny is handed back to the waiting session. Budget
+for a human here — the relay holds the connection open for up to 110 seconds — and an
+800ms-style budget guarantees the card is abandoned while still on screen.
+
+Any *other* `coucou_agent` gets no card. Its `PermissionRequest` is answered immediately
+with no decision, so the relay writes nothing and the agent re-asks in its terminal. This
+is deliberate — an approval card for an agent that does not block on the relay's answer
+would hang forever on a decision it never sees.
+
+### One asker per decision
+
+For Pi, **do not answer permissions from a `tool_call` handler.** `pi-permission-system` is
+the extension that decides what needs approving, and it already asks Coucou first and falls
+back to Pi's own dialog when Coucou cannot answer. Two extensions intercepting `tool_call`
+means two cards and two answers for one decision.
+
+If you do add such a handler, it must **fail open**: return `undefined` for every failure
+path — Coucou closed, relay missing, empty answer, timeout, exception. `undefined` means
+"carry on and let the next handler decide". A `block: true` on a failure denies a tool call
+for a reason that has nothing to do with the call, and Pi additionally treats a *throwing*
+`tool_call` handler as a block, so an unguarded `await` is itself a denial.
 
 The pill lifecycle:
 
@@ -99,7 +119,9 @@ A **declared pill** is a catalog entry (`PillCatalog.swift`) that has been enabl
 
 A catalog pill that is not checked in Settings behaves like any other agent: it gets an automatic pill when a session starts, and that pill is removed when the session ends.
 
-The GitHub build exposes Gemini CLI (`agent_gemini`) and Antigravity (`agent_antigravity`) in Settings → Active pills. Cursor (`agent_cursor`) and Codex (`agent_codex`, GitHub build only) are there too — their pills can be declared and set as the main pill; session support is coming in a future version.
+The upstream macOS build has its own release-specific catalog and hook support. In the **Lighto Edition 1.0.0 Windows build**, the shipped agent integrations are Claude Code (shown as the VS Code pill), Pi (`agent_pi`, `#8B5CF6`), Copilot CLI (`agent_copilot`, `#58A6FF`), Antigravity (`agent_antigravity`) and Codex (`agent_codex`). Their enabled pills share a five-pill budget with integrations; each agent keeps its own session state and permission flow.
+
+On Windows each agent writes to its own managed file, preserving unrelated configuration: Claude Code `%USERPROFILE%\.claude\settings.json`, Copilot `%USERPROFILE%\.copilot\hooks\coucou.json`, Antigravity `%USERPROFILE%\.gemini\config\hooks.json`, Codex `%USERPROFILE%\.codex\hooks\hooks.json`, and Pi `%USERPROFILE%\.pi\agent\extensions\coucou.ts`. Pi's file is an extension, not a settings merge; Coucou will not replace an extension it did not install.
 
 ## Real-world examples
 

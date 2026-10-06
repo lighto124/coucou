@@ -1,25 +1,34 @@
 # Changelog
 
-## 0.1.9 — October 6, 2026
+## 1.0.0 Lighto Edition — upstream 0.1.9 base
 
-- Services up close on the iPhone: tap a service and your Mac fetches live data from its API — Vercel, GitHub, Stripe, Resend, Cal.com, n8n and Notion. The keys never leave the Mac; the detail is written to your iCloud encrypted (#251)
-- Act from the iPhone: Vercel (redeploy, promote to production, cancel a build), GitHub (re-run failed jobs, approve, squash and merge), n8n (activate, deactivate, retry a failed run). Each action runs only if it was offered on an item in the last detail the Mac published for that service, is used once, and must be less than 5 minutes old. Nothing that moves money or sends an email (#251)
-- The Live Activity starts 20 seconds after the Mac locks, not immediately, so a quick lock and unlock doesn't spend one of iOS's hourly starts. It starts right away when an agent is waiting for a permission or has a question (#251)
-- After unlocking, the Live Activity waits 30 seconds before ending, in case the Mac locks again — useful on a laptop that goes to sleep the moment you put it down (#251)
-- If the iPhone has no update token yet (iOS held back the start), and an approval or question is waiting, the Mac starts the activity again once for that specific request (#251)
-- Cal.com upcoming bookings work again: the API v2 expects `afterStart` / `beforeEnd`, not `start` / `end`, so the bookings page was empty (#251)
+This fork keeps its own 1.0.0 version line and carries the Windows, agent-hook,
+permission and Desktop Mochi work described below. Its shared macOS source now
+includes upstream 0.1.8 and 0.1.9 changes; the published Lighto Edition installer
+remains Windows-focused.
 
-## 0.1.8 — October 5, 2026
+- Everything from 0.1.6: Mochi on the desktop with the wardrobe, greetings, live file-edit tickers and diffs, and the expanded GitHub integration (pull requests, CI, review requests and the contribution grid)
+- Five agent pills now, each with its own name and colour: VS Code (Claude Code), Pi, Copilot CLI, Codex and Antigravity. Every event is routed by the agent tag the relay carries, so one agent's approval card can never land on another agent's pill
+- Pi: install writes one extension file to `~/.pi/agent/extensions/`. Pi reports its sessions, tool calls and a per-turn summary, and permission requests block until you Allow or Deny in the island
+- Copilot CLI: Coucou's entries go into `~/.copilot/hooks/coucou.json` in the flat `exec`/`args`/`timeoutSec` shape Copilot expects. Only `PermissionRequest` waits on you
+- Codex: installs its hook entries in `~/.codex/hooks/hooks.json`, preserves unrelated hooks and routes Codex activity and supported permission requests to its own pill
+- Antigravity: `~/.gemini/config/hooks.json`, wired to Antigravity's own `PreInvocation`/`PostInvocation` events plus the legacy lifecycle names so a session is never half-tracked
+- Settings has an agent picker: pick an agent, see whether its hooks are installed, read the diff, and write it — all with a backup and a fingerprint guard, exactly as Claude Code always did
+- Every agent writes to its own file, so installing one can never clobber another's hooks, and uninstalling restores the file byte for byte
+- Coucou never overwrites or deletes a Pi extension it did not write. If your own extension is already at that path, it is left exactly as it is, the Settings window says so, and there is no Install or Uninstall button to press by mistake — reinstalling your hook cannot replace it with Coucou's built-in one
+- Fixed Pi permission prompts being abandoned: the request waited 800ms for a human to click Allow, so the island card was discarded while still on screen and Pi fell back to its own dialog. The wait is now long enough for a person, and "Coucou is not running" is detected immediately instead of by timeout
+- Pi permissions now have exactly one asker. `pi-permission-system` asks Coucou first and falls back to Pi's dialog, and Coucou's extension no longer answers permissions too — two extensions intercepting one decision produced duplicate cards
+- Every failure while asking now falls through to Pi rather than denying: Coucou closed, relay missing, empty or unrecognised answer, timeout, or an exception in the handler
+- Fixed the Pi prompt ticker always being empty — it read a `text` field that does not exist on `before_agent_start`, so it always sent `undefined`
 
-- Coucou on iPhone: turn on Settings → General → iPhone (off by default) and your agent sessions show up live in the Coucou iPhone app and its widgets, through your own private iCloud. Project names, commands and questions are encrypted with your iCloud keys; turning it off deletes them (#209, #211, #212, #213)
-- Allow or deny a permission from the iPhone: a notification with the command, Deny right from it, Allow behind Face ID. Your Mac only applies a decision meant for the exact request it is waiting on, and the request expires after 2 minutes. The iPhone keeps a history of your decisions (#220)
-- Lock your Mac while an agent works and Mochi moves to your iPhone's Lock Screen and Dynamic Island, then comes back to the notch when you unlock. Turn it on under Settings → General → iPhone. It goes through a small relay that only sees the agent's name and state (#221)
-- Mochi, the pills and the diff engine now live in a shared package used by both apps; nothing changes in the notch (#210)
-- The iPhone sees more of what your Mac sees: every service Mochi (GitHub, Stripe, Vercel, Resend, Cal.com, n8n, Notion) with its latest items, and the last turn of each session with its commands and diffs, all encrypted with your iCloud keys. No API key ever leaves the Mac (#224)
-- Send the next instruction to Claude Code from the iPhone (GitHub build, off by default): your Mac picks it up within 15 seconds and continues the session in its own folder (#224)
-- Answer Claude's questions from the iPhone: your Mac applies an answer only if it matches the question still waiting (#241)
-- The Live Activity counts the time since Mochi left, and shows Allow and Deny while a command waits for you (#232, #241)
-- A new coucou sound for Mochi's greeting (#241)
+## Upstream 0.1.9 baseline merged
+
+- Adds upstream iPhone service-detail actions and Live Activity timing/recovery improvements, plus a Cal.com API v2 fix. These Apple-platform changes do not change the Windows 1.0.0 installer feature set.
+
+## Upstream 0.1.8 baseline merged
+
+- Brings in upstream's iPhone companion, widgets and private iCloud session sync, plus the shared CoucouKit refactor. These Apple-platform features are source changes; the Lighto 1.0.0 published installer remains Windows-only.
+- Includes upstream changes for iPhone approval decisions, questions, Live Activities and service/session summaries. They do not change the Windows installer feature set.
 
 ## 0.1.7 — October 4, 2026
 
